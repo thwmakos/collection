@@ -17,13 +17,14 @@
 //   term '*' primary
 //   term '/' primary
 // primary:
+//   '+' primary
+//   '-' primary
 //   number
 //   '(' expression ')'
 // number:
 //   floating-point-literal
 
 use std::{io::{self, Write}, process::exit};
-use std::vec;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum TokenKind
@@ -65,6 +66,7 @@ impl Evaluator
 	fn expression(&mut self) -> f32
 	{
 		let mut left = self.term();
+		
 		let mut t = self.get_token();
 		if t.kind == TokenKind::EndOfInput
 		{
@@ -166,6 +168,15 @@ impl Evaluator
 			{
 				return t.number;
 			},
+			// unary plus or minus
+			TokenKind::Plus =>
+			{
+				return self.primary();
+			},
+			TokenKind::Minus =>
+			{
+				return -self.primary();
+			},
 			_ => panic!("primary term expected"),
 		}
 	}
@@ -190,11 +201,6 @@ impl Evaluator
 	fn return_token(&mut self, tok : Token)
 	{
 		self.index -= 1;
-
-		if self.index < 0
-		{
-			panic!("negative index");
-		}
 		
 		let expected_token = self.tokens.get(self.index).unwrap().clone();
 
@@ -279,10 +285,13 @@ impl Evaluator
 				None => break,
 			}
 		}
-	
-		for tok in tokens.iter()
+		
+		if cfg!(debug_assertions)
 		{
-			println!("{:?}", tok);
+			for tok in tokens.iter()
+			{
+				println!("{:?}", tok);
+			}
 		}
 
 		return tokens; 
