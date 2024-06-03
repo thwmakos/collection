@@ -8,19 +8,20 @@ TODO: error handling and unary plus/minus
 
 Grammar is as follows.
 
+```
 expression:  
-  term  
-  expression '+' term  
-  expression '-' term  
+    term  
+    expression '+' term  
+    expression '-' term  
 term:  
-  primary  
-  term '*' primary  
-  term '/' primary  
+    primary  
+    term '*' primary  
+    term '/' primary  
 primary:  
-  '+' primary  
-  '-' primary  
-  number  
-  '(' expression ')'  
+    '+' primary  
+    '-' primary  
+    number  
+    '(' expression ')'  
 number:  
-  floating-point-literal  
-
+    floating-point-literal  
+```
