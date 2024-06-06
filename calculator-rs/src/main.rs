@@ -13,9 +13,12 @@
 //   expression '+' term
 //   expression '-' term
 // term:
+//   factor
+//   term '*' factor
+//   term '/' factor
+// factor:
 //   primary
-//   term '*' primary
-//   term '/' primary
+//   primary '^' factor
 // primary:
 //   '+' primary
 //   '-' primary
@@ -24,7 +27,9 @@
 // number:
 //   floating-point-literal
 
-use std::{io::{self, Write}, process::exit};
+use std::io::{self, Write};
+
+type NumberType = f32;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum TokenKind
@@ -33,6 +38,7 @@ enum TokenKind
 	Minus,
 	Multiply,
 	Divide,
+	Exponentiate,
 	LeftParen,
 	RightParen,
 	Number,
@@ -44,7 +50,94 @@ enum TokenKind
 struct Token
 {
 	kind   : TokenKind, // kind of token
-	number : f32        // the number if the kind is number
+	number : NumberType // the number if the kind is number
+}
+
+// tokenise the input string to a new Vec<Token> object
+fn tokenise_string(input : &str) -> Result<Vec<Token>, String>
+{
+	let mut tokens : Vec<Token> = Vec::new();
+
+	let mut chars = input.chars().peekable();
+
+	loop
+	{
+		match chars.next()
+		{
+			Some(c) => match c
+			{
+				// eat whitespace
+				'\n' | '\t' | ' ' => continue,
+				// single char tokens
+				'+' => tokens.push(Token { kind : TokenKind::Plus, number : 0.0 }),
+				'-' => tokens.push(Token { kind : TokenKind::Minus, number : 0.0 }),
+				'*' => tokens.push(Token { kind : TokenKind::Multiply, number : 0.0 }),
+				'/' => tokens.push(Token { kind : TokenKind::Divide, number : 0.0 }),
+				'(' => tokens.push(Token { kind : TokenKind::LeftParen, number : 0.0 }),
+				')' => tokens.push(Token { kind : TokenKind::RightParen, number : 0.0 }),
+				'^' => tokens.push(Token { kind : TokenKind::Exponentiate, number : 0.0 }),
+				// start of floating point literal, read until it ends
+				'0'..='9' | '.' =>
+				{
+					let mut number_string = String::from(c);
+					// have we encountered a dot yet?
+					let has_dot = c == '.';
+
+					loop
+					{
+						// peek next character
+						match chars.peek()
+						{
+							// if digits or first dot in the literal
+							// add it to the string and consume the character,
+							// otherwise stop and convert to floating point number
+							Some(next_char) => match next_char
+							{
+								'0'..='9' =>
+								{
+									number_string.push(next_char.clone());
+									chars.next();
+								},
+								'.' =>
+								{
+									if has_dot
+									{
+										break;
+									}
+									else
+									{
+										number_string.push(next_char.clone());
+										chars.next();
+									}
+								},
+								_ => break,
+							},
+							// nothing to do
+							None => break
+						}
+					}
+
+					let number : f32 = number_string.parse().expect("failed to parse number");
+
+					tokens.push( Token { kind : TokenKind::Number, number });
+				},
+
+				_ => return Err(format!("invalid character {} in input", c)),
+			},
+
+			None => break,
+		}
+	}
+
+	if cfg!(debug_assertions)
+	{
+		for tok in tokens.iter()
+		{
+			println!("{:?}", tok);
+		}
+	}
+
+	Ok(tokens)
 }
 
 pub struct Evaluator
@@ -58,12 +151,12 @@ pub struct Evaluator
 impl Evaluator 
 {
 	// evaluate the expression from the tokens in self.tokens vector
-	pub fn evaluate(&mut self) -> f32
+	pub fn evaluate(&mut self) -> NumberType
 	{
-		return self.expression();
+		self.expression()
 	}
 
-	fn expression(&mut self) -> f32
+	fn expression(&mut self) -> NumberType
 	{
 		let mut left = self.term();
 		
@@ -103,7 +196,7 @@ impl Evaluator
 		left
 	}
 
-	fn term(&mut self) -> f32
+	fn term(&mut self) -> NumberType
 	{
 		let mut left = self.primary();
 		let mut t = self.get_token();
@@ -146,7 +239,7 @@ impl Evaluator
 		left
 	}
 
-	fn primary(&mut self) -> f32
+	fn primary(&mut self) -> NumberType
 	{
 		let mut t = self.get_token();
 
@@ -210,97 +303,16 @@ impl Evaluator
 		}
 	}
 
-	// tokenise the input string to a new Vec<Token> object
-	fn tokenise_string(input : &str) -> Vec<Token>
-	{
-		let mut tokens : Vec<Token> = Vec::new();
-		
-		let mut chars = input.chars().peekable();
-
-		loop 
-		{
-			match chars.next() 
-			{
-				Some(c) => match c
-				{
-					// eat whitespace
-					'\n' | '\t' | ' ' => continue,
-					// single char tokens
-					'+' => tokens.push(Token { kind : TokenKind::Plus, number : 0.0 }),
-					'-' => tokens.push(Token { kind : TokenKind::Minus, number : 0.0 }),
-					'*' => tokens.push(Token { kind : TokenKind::Multiply, number : 0.0 }),
-					'/' => tokens.push(Token { kind : TokenKind::Divide, number : 0.0 }),
-					'(' => tokens.push(Token { kind : TokenKind::LeftParen, number : 0.0 }),
-					')' => tokens.push(Token { kind : TokenKind::RightParen, number : 0.0 }),
-				
-					// start of floating point literal, read until it ends
-					'0'..='9' | '.' => 
-					{
-						let mut number_string = String::from(c);
-						// have we encountered a dot yet?
-						let has_dot = c == '.';	
-
-						loop
-						{
-							// peek next character
-							match chars.peek()
-							{
-								// if digits or first dot in the literal
-								// add it to the string and consume the character,
-								// otherwise stop and convert to floating point number
-								Some(next_char) => match next_char
-								{
-									'0'..='9' => 
-									{
-										number_string.push(next_char.clone());
-										chars.next();
-									},
-									'.' =>
-									{
-										if has_dot
-										{
-											break;
-										}
-										else 
-										{
-											number_string.push(next_char.clone());
-											chars.next();
-										}
-									},
-									_ => break,
-								},
-								// nothing to do
-								None => break
-							}
-						}
-
-						let number : f32 = number_string.parse().expect("failed to parse number");
-
-						tokens.push( Token { kind : TokenKind::Number, number });
-					},
-
-					_ => panic!("invalid character {} in input", c),
-				},
-
-				None => break,
-			}
-		}
-		
-		if cfg!(debug_assertions)
-		{
-			for tok in tokens.iter()
-			{
-				println!("{:?}", tok);
-			}
-		}
-
-		return tokens; 
-	}
 
 	// initialise a new object by tokenising the input string
-	fn new(input : &str) -> Evaluator
+	fn new(input : &str) -> Result<Evaluator, String>
 	{
-		Evaluator { tokens : Self::tokenise_string(input), index : 0 }	
+		match tokenise_string(input)
+		{
+			Ok(tokens) => Ok(Evaluator { tokens, index : 0}),
+			Err(e) => Err(e)
+		}
+		//Evaluator { tokens : Self::tokenise_string(input), index : 0 }
 	}
 
 }
@@ -329,7 +341,16 @@ fn main()
 			break;
 		}
 
-		let mut evaluator  = Evaluator::new(&input_expr);
+		let mut evaluator = match Evaluator::new(&input_expr)
+		{
+			Ok(ev) => ev,
+			Err(error_msg) =>
+			{
+				println!("{}", error_msg);
+				continue;
+			}
+		};
+
 		let result = evaluator.evaluate();
 
 		println!("{result_text}{result}");
