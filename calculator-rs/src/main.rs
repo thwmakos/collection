@@ -54,6 +54,7 @@ struct Token
 }
 
 // tokenise the input string to a new Vec<Token> object
+// TODO: change from Err(String) to a error enum
 fn tokenise_string(input : &str) -> Result<Vec<Token>, String>
 {
 	let mut tokens : Vec<Token> = Vec::new();
@@ -151,19 +152,20 @@ pub struct Evaluator
 impl Evaluator 
 {
 	// evaluate the expression from the tokens in self.tokens vector
-	pub fn evaluate(&mut self) -> NumberType
+	// TODO: change from Err(String) to a error enum in the functions here
+	pub fn evaluate(&mut self) -> Result<NumberType, String>
 	{
 		self.expression()
 	}
 
-	fn expression(&mut self) -> NumberType
+	fn expression(&mut self) -> Result<NumberType, String>
 	{
-		let mut left = self.term();
+		let mut left = self.term()?;
 		
 		let mut t = self.get_token();
 		if t.kind == TokenKind::EndOfInput
 		{
-			return left;
+			return Ok(left);
 		}
 
 		loop 
@@ -172,17 +174,17 @@ impl Evaluator
 			{
 				TokenKind::Plus => 
 				{
-					left += self.term()
+					left += self.term()?;
 				},
 				TokenKind::Minus => 
 				{
-					left -= self.term();
+					left -= self.term()?;
 				}
 				_ => 
 				{
 					// return the token and return since no more + or -
 					self.return_token(t);
-					return left;
+					return Ok(left);
 				}
 			}
 			
@@ -193,16 +195,16 @@ impl Evaluator
 			}
 		}
 
-		left
+		Ok(left)
 	}
 
-	fn term(&mut self) -> NumberType
+	fn term(&mut self) -> Result<NumberType, String>
 	{
-		let mut left = self.primary();
+		let mut left = self.primary()?;
 		let mut t = self.get_token();
 		if t.kind == TokenKind::EndOfInput
 		{
-			return left;
+			return Ok(left);
 		}
 
 		loop 
@@ -211,21 +213,21 @@ impl Evaluator
 			{
 				TokenKind::Multiply =>
 				{
-					left *= self.primary();
+					left *= self.primary()?;
 				},
 				TokenKind::Divide =>
 				{
-					let right = self.primary();
+					let right = self.primary()?;
 					if right == 0.0
 					{
-						panic!("division by zero");
+						return Err("division by zero".to_string());
 					}
 					left /= right;
 				},
 				_ =>
 				{
 					self.return_token(t);
-					return left;
+					return Ok(left);
 				}
 			}
 
@@ -236,10 +238,10 @@ impl Evaluator
 			}
 		}
 
-		left
+		Ok(left)
 	}
 
-	fn primary(&mut self) -> NumberType
+	fn primary(&mut self) -> Result<NumberType, String>
 	{
 		let mut t = self.get_token();
 
@@ -252,14 +254,14 @@ impl Evaluator
 
 				if t.kind != TokenKind::RightParen
 				{
-					panic!("right paren expected");
+					return Err("right paren expected".to_string());
 				}
 
 				return prim;
 			},
 			TokenKind::Number =>
 			{
-				return t.number;
+				return Ok(t.number);
 			},
 			// unary plus or minus
 			TokenKind::Plus =>
@@ -268,9 +270,12 @@ impl Evaluator
 			},
 			TokenKind::Minus =>
 			{
-				return -self.primary();
+				return Ok(-self.primary()?);
 			},
-			_ => panic!("primary term expected"),
+			_ =>
+			{
+				return Err("primary term expected".to_string());
+			}
 		}
 	}
 	
@@ -351,9 +356,16 @@ fn main()
 			}
 		};
 
-		let result = evaluator.evaluate();
-
-		println!("{result_text}{result}");
-
+		match evaluator.evaluate()
+		{
+			Ok(result) =>
+			{
+				println!("{result_text}{result}");
+			}
+			Err(e) =>
+			{
+				println!("error: {}", e);
+			}
+		}
 	}
 }
