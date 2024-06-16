@@ -157,7 +157,8 @@ impl Evaluator
 	{
 		self.expression()
 	}
-
+	
+	// handles + and -
 	fn expression(&mut self) -> Result<NumberType, String>
 	{
 		let mut left = self.term()?;
@@ -197,11 +198,13 @@ impl Evaluator
 
 		Ok(left)
 	}
-
+	
+	// handles * and /
 	fn term(&mut self) -> Result<NumberType, String>
 	{
-		let mut left = self.primary()?;
+		let mut left = self.factor()?;
 		let mut t = self.get_token();
+
 		if t.kind == TokenKind::EndOfInput
 		{
 			return Ok(left);
@@ -213,11 +216,11 @@ impl Evaluator
 			{
 				TokenKind::Multiply =>
 				{
-					left *= self.primary()?;
+					left *= self.factor()?;
 				},
 				TokenKind::Divide =>
 				{
-					let right = self.primary()?;
+					let right = self.factor()?;
 					if right == 0.0
 					{
 						return Err("division by zero".to_string());
@@ -240,7 +243,48 @@ impl Evaluator
 
 		Ok(left)
 	}
+	
+	// exponentiation has precedence of over * and /, so we 
+	// need another level in the grammar to handle it
+	// also it is right-associative so we need to account for that
+	// in the grammar too
+	fn factor(&mut self) -> Result<NumberType, String>
+	{
+		let mut primary = self.primary()?;
+		let mut t    = self.get_token();
 
+		if t.kind == TokenKind::EndOfInput
+		{
+			return Ok(primary);
+		}
+
+		loop 
+		{
+			match t.kind 
+			{
+				TokenKind::Exponentiate =>
+				{
+					let exponent = self.factor()?;
+					primary = NumberType::powf(primary, exponent);
+				},
+				_ =>
+				{
+					self.return_token(t);
+					return Ok(primary);
+				}
+			}
+			
+			t = self.get_token();
+			if t.kind == TokenKind::EndOfInput
+			{
+				break;
+			}
+		}
+
+		Ok(primary)
+	}
+	
+	// handles unary + and - and parentheses
 	fn primary(&mut self) -> Result<NumberType, String>
 	{
 		let mut t = self.get_token();
