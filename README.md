@@ -14,4 +14,4 @@ Various code snippets and small projects written for research, personal learning
 - ``fast-slow-pde``: Finite difference solver used for numerical experiments for the preprint <https://arxiv.org/abs/2207.06134>, ``matlab``.
 - ``fold-point-mathematica-notebooks``: Used to generate plots and figures for same preprint <https://arxiv.org/abs/2207.06134>, ``Mathematica``.
 - ``signupbot``: Bot to signup for events at ``signupgenious.com`` using Selenium webdriver; needs to be updated as the signupgenious website layout has changed. To be used with appropriate ``systemd`` timer unit.
-
+- ``mnist-digit-rec-cpp``: In separate repository [thwmakos/mnist-digit-rec-cpp](https://github.com/thwmakos/mnist-digit-rec-cpp).
