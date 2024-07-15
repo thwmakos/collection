@@ -4,22 +4,41 @@
 % ~thwmakos~
 %
 
-T = 0.005; % solve until this time 
-M = 50; % grid point in x-axis
+%T = 0.056
+T = 0.063; % solve until this time 
+M = 20; % grid point in x-axis
 N = 8 * T * M^2; % ensure stabitily of the euler step forward in time
 
 
-initial_conditon = @(x, y) (sin(2 * pi * x) .* sin(5 * pi * y));
-% zerp dirichlet bc is hardcoded in Heat2D.m
+initial_condition = @(x, y) 2 * (sin(2 * pi * x) .* sin(5 * pi * y));
 
-% actually solve PDE (use 20 x 20 spatial grid)
-[Sol, Times, X, Y] = Heat2D(M, M, N, T);
+% zero dirichlet bc is hardcoded in Heat2D.m
 
-figure;
-surf(X, Y, Sol(:, :, 1));
-title(["T = ", num2str(Times(1))]);
+% non-linear source
+f = @(x) 20 * exp(x);
 
-figure;
-surf(X, Y, Sol(:, :, end));
-axis([0 1 0 1 -1 1]);
-title(["T = ", num2str(Times(end))]);
+% actually solve PDE (use M x M spatial grid)
+[Sol, Times, X, Y] = Heat2D_nonlinear(M, M, N, T, f, initial_condition, 0);
+%
+%[Sol, Times, X, Y] = Heat2D_CN_nonlinear(M, 50, 0.13, f, initial_condition);
+
+%figure;
+%surf(X, Y, Sol(:, :, 1));
+%title(["T = ", num2str(Times(1))]);
+
+% record every frame_step'th frame only
+frame_step = 2;
+figure('windowstate', 'maximized');
+Frames = moviein(ceil(length(Times) / frame_step), gcf);
+frame_counter = 1;
+
+for n = 1:frame_step:length(Times)
+	surf(X, Y, Sol(:, :, n));
+	zlim([-3 8]);
+	title(["T = ", num2str(Times(n), "%.4f")]);
+	
+	Frames(frame_counter) = getframe(gcf);
+	frame_counter = frame_counter + 1;
+end
+
+movie(Frames, 2, ceil(length(Frames) / 2));

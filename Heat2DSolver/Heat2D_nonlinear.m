@@ -1,24 +1,25 @@
-% Heat2D.m
-% 1/4/2018
+% Heat2D_nonlinear.m
+% 19/1/2019
 % ~thwmakos~
 
 % usage:
 % [Sol, Times, X, Y] = Heat2D(M, P, N, T);
 % contourf(X, Y, S(:, :, end))
 
-% solve u_t = u_xx + u_yy in [0, 1]^2 for 0<= t <= T
+% solve u_t = u_xx + u_yy + f(u) in [0, 1]^2 for 0<= t <= T
 %
 % input : M - number of x-axis grid points
 %         P - number of y-axis grid points
 %         N - number of time steps
 %         T - solve for t=0 up to T
+%         f - the nonlinear source on the right hand side
 %         initial_condition - function handle, two matrix args (x, y) 
 %                             u(x, y, t=0) = initial_condition(x, y)
 %                             argument is optional;
 %                             defaults to the initial condition given in
 %                             C1.pdf
 %                             
-%         dirichlet_boundary_condition - constant for now, optiona as well,
+%         dirichlet_boundary_condition - constant for now, optional as well,
 %                                        defaults to 0. KEEP IT AT 0 PLS
 %                                        
 %
@@ -27,21 +28,21 @@
 %          Times - Contains the time at each timestep
 %          X, Y  - Solution meshgrid
 % --------------------------------------------------------------------
-function [Sol, Times, X, Y] = Heat2D(M, P, N, T, initial_condition, ...
+function [Sol, Times, X, Y] = Heat2D_nonlinear(M, P, N, T, f, initial_condition, ...
                                     dirichlet_boundary_condition)
     
     
-    if nargin < 4
-        error('Provide at least the first four args!');
+    if nargin < 5
+        error('Provide at least the first five args!');
     end
     
-    if nargin == 4
+    if nargin == 5
         initial_condition = @(x, y) (sin(2 * pi * x) .* sin(5 * pi * y));
         %initial_condition = @(x, y) exp(3 * x + 3 * y);
         dirichlet_boundary_condition = 0.0; %@(x, y) (0.0);
     end
     
-    if nargin == 5
+    if nargin == 6
         dirichlet_boundary_condition = 0.0; %@(x, y) (0.0);
     end
                                 
@@ -89,7 +90,7 @@ function [Sol, Times, X, Y] = Heat2D(M, P, N, T, initial_condition, ...
                 % interior
                 else
                     laplacian(m, p) = ((1 / dx^2) * (S(m - 1, p) - 2 * S(m, p) + S(m + 1, p))) +  ...
-                        ((1 / dy^2) * (S(m, p - 1) - 2 * S(m, p) + S(m, p + 1)));
+                        ((1 / dy^2) * (S(m, p - 1) - 2 * S(m, p) + S(m, p + 1))) +  f(S(m, p));
                 end
             end
         end
