@@ -14,7 +14,7 @@ animation_duration = 3; % in seconds
 % initial data   
 u0 =  0.5 * ones(1, N) + 0.45 * rand(1, N); 
 v0 =  0.5 * ones(1, N) - 0.45 * rand(1, N); 
-s0 = initial_time * ones(1, N) + 0.12 * rand(1, N);
+s0 = initial_time * ones(1, N) + 0.1 * rand(1, N);
 w0 = [u0 v0 s0];
 
 % construct the diffusion/Laplacian matrix
@@ -26,8 +26,6 @@ A1(1, 1) = -1;
 A1(N, N) = -1; 
 A2(1, 1) = -epsilon; 
 A2(N, N) = -epsilon; %Neumann bc
-
-A = (1 / h^2) * [A1 zeros(size(A1)); zeros(size(A2)) A2];
 
 % calculate numerical solution
 [t, res] = ode15s(@vf, tspan, w0);
